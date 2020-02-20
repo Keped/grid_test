@@ -2,4 +2,4 @@ Base project for Grid interview
 
 > 500Tech.com
 
-See grid api at out/Grid.html
+[a relative link](./out/Grid.html) See grid api at 
