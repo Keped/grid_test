@@ -1,5 +1,5 @@
 import React from 'react';
-import { connect } from 'react-redux';
+import { connect, useStore } from 'react-redux';
 import Grid from './Grid';
 
 const Trailer = ({ data }) => (
@@ -9,27 +9,38 @@ const Trailer = ({ data }) => (
     trailer...
   </a>
 );
-
+const CustomHeader = ({ columnData }) => (
+  <span style={{color:'green'}}>{columnData.title}</span>
+);
 const config = [
   {
     title: 'id',
     fieldName: 'imdbID'
+  },  
+  {
+    title: 'genre',
+    fieldName: 'Genre',
+    cellStyle: (rowItem) => rowItem.Genre.indexOf('Drama') == -1 ? {backgroundColor:'orange',color:'red'} : {}
   },
   {
     title: 'title',
-    fieldName: 'Title'
+    fieldName: 'Title',
+    headerStyle: {color:'blue', textTransform:'uppercase'}
   },
   {
     title: 'rating',
-    fieldName: 'imdbRating',
+    fieldName: 'imdbRating'
   },
-//  {
-//    title: 'trailer',
-//    component: Trailer
-//  }
+ {
+   title: 'trailer',
+   component: Trailer,
+   cellStyle: (rowItem) => rowItem.Genre.indexOf('Drama') == -1 ? {backgroundColor:'orange'} : {},
+   headerComponent:CustomHeader
+ }
 ];
 
 const App = ({ data }) => (
+ 
   <div>
     <Grid config={ config } data={ data } />
   </div>
