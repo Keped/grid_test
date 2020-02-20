@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: Grid.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: Grid.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import React, {useState, useMemo} from 'react';
+import styled from 'styled-components';
+
+/**
+ * @description A React Component that renders a Table
+ * 
+ * @constructor
+ * Grid
+ * @param {Object[]} config - &lt;b>column configuration item:&lt;/b> &lt;br>
+ *                             &lt;ul>
+ *                                  &lt;li>title (string): the column title&lt;/li>
+ *                                  &lt;li>fieldName (string): a data accessor&lt;/li>
+ *                                  &lt;li>component (function): optional custom cell component. function is passed entire item data &lt;/li>
+ *                                  &lt;li>headerComponent (function): optional custom header component. function is passed the rest of this config &lt;/li>
+*                                   &lt;li>headerStyle (function/object): optional custom header container (th) css style. function is passed the rest of this column config&lt;/li>
+*                                   &lt;li>cellStyle (function/object): optional custom cell container (td) css style. function is passed  passed entire item data, for conditional styling &lt;/li>
+ *                             &lt;/ul>
+ *                            
+ * @param {Object[]} data - your table data, arranged in rows by items
+ * 
+ */
+
+const Grid = ({ config, data }) => {
+  
+  const [pageSize] = useState(15); 
+  const [pageNum, setPageNum] = useState(1);
+  
+  // just adding range checks to setters 
+  const pageBack = ()=>{
+    if (pageNum > 1){
+      setPageNum(pageNum - 1);
+    }
+  };
+
+  const pageForward = ()=>{
+    if (pageNum * pageSize &lt; data.length - 1) {
+      setPageNum(pageNum + 1);
+    }
+  };
+
+  // helper method to support both function and object input  
+  const getStyleFromConfig = (styleData, passedData) => {
+    if(typeof(styleData) == 'function'){
+      return styleData(passedData)
+    }
+    if (typeof(styleData) == 'object'){
+      return {...styleData}
+    }
+  } 
+
+  // the iterators are wrapped with useMemo hooks as optimization - it is not crucial to app functionality but can reduce renders if 'watched' variables don't change 
+  const headers =  useMemo(()=>{
+      return config.map((columnData, columnIndex)=>{
+          //extract cell content and container style if needed
+          const headerStyle = typeof(columnData.headerStyle) != 'undefined' ? getStyleFromConfig(columnData.headerStyle,columnData) : {};
+          const headerContent = typeof(columnData.headerComponent) == 'function' ? columnData.headerComponent({columnData}) : columnData.title;
+          return (&lt;GenericHeader style={headerStyle} key={`th_${columnIndex}`}>{headerContent}&lt;/GenericHeader>)            
+      });
+    },[config]);
+  
+  const rows = useMemo(()=>{      
+      const renderRowCells = (rowData, config) => {
+          return config.map((configItem, columnIndex)=>{
+              //extract cell content and container style if needed
+              const cellStyle = typeof(configItem.cellStyle) != 'undefined' ? getStyleFromConfig(configItem.cellStyle,rowData) : {};
+              const cellContent = typeof(configItem.component) == 'function' ? configItem.component({data:rowData}) : rowData[configItem.fieldName];
+              return &lt;GenericCell style={cellStyle} key={`td_${columnIndex}`}>{ cellContent}&lt;/GenericCell>                  
+          })          
+      };
+      // do pagination. data itself not changed
+      const shownData = data.slice(((pageNum - 1)*pageSize), ((( pageNum -1 )*pageSize)+ (pageSize)))
+      return shownData.map((row,rowIndex)=>(
+          &lt;tr key={`td_${rowIndex}`}>
+          {renderRowCells(row, config)}          
+          &lt;/tr>)
+      );
+    },
+    [data, pageSize, pageNum, config]
+  );
+  // dynamically create paging options
+  const pagingButtons = useMemo( 
+    () => {
+      let buttons = [];
+      for (let i = 0; i &lt; data.length;i += pageSize){
+        let buttonNum = (i / pageSize) + 1 ;
+        buttons.push(
+          &lt;option key={`pager_${buttonNum}`}
+            value={buttonNum -1}>
+              {buttonNum}
+          &lt;/option>);    
+      }
+      return buttons;
+    },
+    [data, pageSize, pageNum]
+  );
+  5
+  return  (
+    &lt;TableContainer>
+       &lt;PaginatorContainer>
+          &lt;PaginatorButton disabled={pageNum==1}  onClick={()=>{setPageNum(1)}}>FIRST&lt;/PaginatorButton>
+          &lt;PaginatorButton disabled={pageNum==1} onClick={pageBack}>PREV&lt;/PaginatorButton>
+            &lt;PaginatorSelect value={pageNum - 1} onChange={(e)=>{setPageNum(parseInt(e.target.value) + 1)}}>
+                  {pagingButtons}
+            &lt;/PaginatorSelect>
+          &lt;PaginatorButton disabled={pageNum==pagingButtons.length} onClick={pageForward}>NEXT&lt;/PaginatorButton>          
+          &lt;PaginatorButton disabled={pageNum == pagingButtons.length } onClick={()=>{setPageNum(pagingButtons.length)}}>LAST&lt;/PaginatorButton>          
+      &lt;/PaginatorContainer>
+      &lt;table>
+        &lt;thead>
+          &lt;tr>
+            {headers}
+          &lt;/tr>
+        &lt;/thead>
+        &lt;tbody>
+          {rows}
+        &lt;/tbody>
+      &lt;/table>
+  &lt;/TableContainer>)
+};
+
+export default Grid;
+// If those styles were to be re-used we can easily refactor them to a seperate js module and import them, without anything in rendering.
+const GenericHeader = styled.th`
+  font-size:1.5em;
+`;
+
+const GenericCell = styled.td`
+  font-size:1.2em;
+  text-align:center;
+`;
+
+const PaginatorContainer = styled.div`
+  display: flex;
+  flex-direction:row;
+  align-items: center;
+  justify-content: center;
+  height: 70px;
+`;
+
+const TableContainer = styled.div`
+  display: flex;
+  flex-direction:column;
+`;
+
+const PaginatorButton = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  width:100px;
+  border: 1px solid black;
+  border-radius:7px;
+  background-color:${(p)=>p.highlighted ? 'lightgray' : 'white'};
+  cursor:pointer;
+  margin:0 5px;
+  opacity:${(p)=>p.disabled ? 0.4 : 1};
+`;
+
+const PaginatorSelect = styled.select`
+  font-size:1.4em;
+  margin:0 5px;
+  border-color:black;
+`;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Grid.html">Grid</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.3</a> on Thu Feb 20 2020 11:23:02 GMT-0500 (Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
